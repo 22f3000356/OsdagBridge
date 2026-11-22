@@ -1,4 +1,35 @@
-def ch7_quantities(input_dict):
+# =============================================================================
+# Chapter 7: Material Take-off & Quantity Summary
+# Extracted from report_generator.py — DO NOT add business logic here.
+# =============================================================================
+
+from osdagbridge.core.reports import theme
+from osdagbridge.core.reports.report_utils import _fig_embed
+
+
+def ch7_quantities(input_dict, fig_paths=None):
+    """Bill of materials table + material-quantity bar charts (scope item 5).
+
+    `fig_paths` maps figure keys to on-disk paths (written by
+    report_generator.generate_report before chapters are assembled). The two
+    material charts embed only when their paths are present.
+    """
+    fig_paths = fig_paths or {}
+
+    header = theme.longtable_header(
+        ["S.N.", "Item Description", "Volume", "Quantity",
+         "Total Volume", "Weight (MT)", "Total Weight (MT)"],
+        caption=None, continued=True)
+
+    steel_fig = _fig_embed(
+        fig_paths.get("material_steel"),
+        "Figure 7.1  Structural Steel Tonnage by Element",
+        width=r"0.8\textwidth")
+    concrete_fig = _fig_embed(
+        fig_paths.get("material_concrete"),
+        "Figure 7.2  Deck Concrete Volume vs Reinforcement Steel Weight",
+        width=r"0.8\textwidth")
+
     return r"""
 \chapter{Material Take-off \& Quantity Summary}
 \label{ch:material-takeoff}
@@ -8,9 +39,7 @@ def ch7_quantities(input_dict):
 \begingroup
 \setlength{\tabcolsep}{3.5pt}
 \begin{longtable}{|C{1.0cm}|L{3.8cm}|C{2.6cm}|C{1.8cm}|C{1.8cm}|C{1.8cm}|C{1.8cm}|}
-\hline
-\textbf{S.N.} & \textbf{Item Description} & \textbf{Volume} & \textbf{Quantity} & \textbf{Total Volume} & \textbf{Weight (MT)} & \textbf{Total Weight (MT)} \\
-\hline
+""" + header + r"""
 1 & Structural Steel (IS 2062) for Girders & """ + str(input_dict.get("steel_girders_vol_formula", "N.A.")) + r""" & """ + str(input_dict.get("steel_girders_qty", "N.A.")) + r""" & """ + str(input_dict.get("steel_girders_vol_total", "N.A.")) + r""" & """ + str(input_dict.get("steel_girders_wt_single", "N.A.")) + r""" & """ + str(input_dict.get("steel_girders_wt_total", "N.A.")) + r""" \\
 \hline
 2(a) & Cross Bracing - Top Chord & """ + str(input_dict.get("bracing_top_vol_formula", "N.A.")) + r""" & """ + str(input_dict.get("bracing_top_qty", "N.A.")) + r""" & """ + str(input_dict.get("bracing_top_vol_total", "N.A.")) + r""" & """ + str(input_dict.get("bracing_top_wt_single", "N.A.")) + r""" & """ + str(input_dict.get("bracing_top_wt_total", "N.A.")) + r""" \\
@@ -28,6 +57,17 @@ def ch7_quantities(input_dict):
 6 & Crash Barrier & """ + str(input_dict.get("crash_barrier_vol_formula", "N.A.")) + r""" & """ + str(input_dict.get("crash_barrier_qty", "N.A.")) + r""" & """ + str(input_dict.get("crash_barrier_vol_total", "N.A.")) + r""" & """ + str(input_dict.get("crash_barrier_wt_single", "N.A.")) + r""" & """ + str(input_dict.get("crash_barrier_wt_total", "N.A.")) + r""" \\
 \hline
 \end{longtable}
+\endgroup
+
+\vspace{1.5em}
+\noindent\textbf{Material Quantity Visualizations}
+
+\vspace{0.5em}
+\noindent These charts summarize the quantities tabulated above to aid rapid comparison of material usage across the structure.
+
+\vspace{0.5em}
+""" + steel_fig + r"""
+
+\vspace{0.5em}
+""" + concrete_fig + r"""
 """
-
-

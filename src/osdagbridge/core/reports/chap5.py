@@ -141,11 +141,12 @@ from osdagbridge.core.utils.common import (
     KEY_UTIL_SHEAR
 )
 
-from osdagbridge.core.reports.report_utils import _tex, _render_value, get_girder_entries
+from osdagbridge.core.reports.report_utils import _tex, _render_value, get_girder_entries, _fig_embed
+from osdagbridge.core.reports import theme, charts
 
 if TYPE_CHECKING:
     pass
-def ch5_design_checks(checks_data, bridge) -> str:
+def ch5_design_checks(checks_data, bridge, fig_paths=None) -> str:
     """Chapter 5 — Design Checks.
 
     Parameters
@@ -1065,6 +1066,17 @@ Fatigue Shear Resistance, $Q_r$ & IRC 22 Table 8 ($\phi d$, $N_{sc}$) & """
     ]
     t522_content = "\n".join(_t522)
 
+    # ── Section 5.5 utilisation-ratio bar chart (scope item 4) ───────────────
+    # The PNG is rendered up-front in report_generator.generate_report using the
+    # same extraction (charts.collect_utilization_ratios) that feeds Table 5.22,
+    # so the chart and the table always agree. Embed only if the path is present.
+    _fp = fig_paths or {}
+    ur_fig = _fig_embed(
+        _fp.get("ur_summary"),
+        "Figure 5.1  Overall Utilization Ratio (Demand / Capacity) for primary elements. "
+        "The red dashed line marks the UR = 1.0 limit --- bars at or below it pass, bars above it fail.",
+        width=r"\textwidth")
+
     return r"""
 \chapter{Design Checks}
 
@@ -1182,10 +1194,11 @@ This section presents all structural design checks performed by OsdagBridge. For
 \vspace{1em}
 \vspace{0.4em}
 \begin{longtable}{|C{1.6cm}|>{\centering\arraybackslash}p{3.6cm}|C{2.4cm}|C{2.0cm}|C{2.1cm}|C{1.7cm}|C{1.5cm}|}
-\caption{\textbf{Girder Design Summary (DCR / Utilization Ratio)}}
-\hline
-\textbf{Girder} & \textbf{Controlling LC / Combination} & \textbf{Controlling Check} & \textbf{Demand} & \textbf{Capacity} & \textbf{UR} & \textbf{Status} \\[6pt]
-\hline
+""" + theme.longtable_header(
+        ["Girder", "Controlling LC / Combination", "Controlling Check",
+         "Demand", "Capacity", "UR", "Status"],
+        caption="Girder Design Summary (DCR / Utilization Ratio)",
+        label="tab:girder-summary") + r"""
 """ + g_summary_table_content + r"""
 \end{longtable}
 \noindent\textit{Note: UR = Demand / Capacity. A value $\leq 1.0$ indicates a passing check. The controlling check is the criterion with the highest UR for each girder, with the real load case/combination that drives it.}
@@ -1491,12 +1504,15 @@ End diaphragms at the supports transfer transverse loads to the bearings, restra
 \label{sec:overall-summary}
 % ===========================
 
+\vspace{0.5em}
+""" + ur_fig + r"""
+
 \vspace{1em}
 \begin{longtable}{|C{3.4cm}|L{4.5cm}|C{2.3cm}|C{2.3cm}|>{\centering\arraybackslash}p{1.6cm}|}
-\caption{\textbf{Overall Design Check Summary --- All Members}}
-\hline
-\textbf{Member / Check} & \textbf{Governing Load Combo} & \textbf{Demand} & \textbf{Capacity} & \textbf{UR} \\[6pt]
-\hline
+""" + theme.longtable_header(
+        ["Member / Check", "Governing Load Combo", "Demand", "Capacity", "UR"],
+        caption="Overall Design Check Summary --- All Members",
+        label="tab:overall-summary") + r"""
 """ + t522_content + r"""
 \end{longtable}
 \noindent\textit{Note: UR = Demand / Capacity. All values $\leq 1.0$ indicate passing checks. The governing check for each component is highlighted in the individual design check sections above.}

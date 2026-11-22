@@ -54,6 +54,7 @@ from osdagbridge.core.utils.common import (
 )
 
 from osdagbridge.core.reports.report_utils import _tex, _render_value
+from osdagbridge.core.reports import theme
 
 def ch3_loads(input_dict):
     # Live load vehicle names mapping
@@ -119,27 +120,49 @@ def ch3_loads(input_dict):
 
     lanes = input_dict.get(KEY_WC_LD_LANE_TABLE_COUNT)
     braking_force_str = ""
+    braking_val_str = "N/A"     # numeric-only value for the Value column
+    braking_unit = ""           # separate Unit column
+    braking_note = ""           # tonnes equivalent, shown in a table note
     if lanes not in (None, ""):
         try:
             lanes_int = int(lanes)
             braking_force_t = IRC6_2017.cl_211_2_braking_force(lanes_int)
             braking_force_kN = braking_force_t * 9.81
+            braking_val_str = f"{braking_force_kN:.2f}"
+            braking_unit = "kN"
+            braking_note = f"{braking_force_t:.2f} tonnes"
             braking_force_str = f"{braking_force_kN:.2f} kN ({braking_force_t:.2f} tonnes)"
         except Exception:
+            braking_val_str = "N/A"
             braking_force_str = "N/A"
     else:
+        braking_val_str = "N/A"
         braking_force_str = "N/A"
+
+    braking_note_tex = (
+        r" Equivalent braking force $\approx$ " + _tex(braking_note) + r"."
+    ) if braking_note else ""
 
     fp_mode  = input_dict.get(KEY_LL_FOOTPATH_PRESSURE_MODE, "")
     fp_value = input_dict.get(KEY_LL_FOOTPATH_PRESSURE_VALUE, "")
+    fp_unit = r"kN/m\textsuperscript{2}"
+    fp_basis = "---"
     if str(fp_mode).strip().lower() in ("as per irc 6", "as per irc6", "automatic"):
         try:
-            fp_str = f"{IRC6_2017.cl_206_1_footway_load():.3f} kN/m² (IRC 6 Cl. 206.1)"
+            fp_val_str = f"{IRC6_2017.cl_206_1_footway_load():.3f}"
+            fp_basis = "IRC 6 Cl. 206.1 (automatic)"
+            fp_str = f"{fp_val_str} kN/m² (IRC 6 Cl. 206.1)"
         except Exception:
+            fp_val_str = "N/A"
+            fp_unit = ""
             fp_str = "N/A"
     elif fp_value not in (None, ""):
+        fp_val_str = f"{fp_value}"
+        fp_basis = "User-specified"
         fp_str = f"{fp_value} kN/m²"
     else:
+        fp_val_str = "N/A"
+        fp_unit = ""
         fp_str = "N/A"
 
     # Vz / Pz — prefer stored computed values; fall back to IRC6 Table 12
@@ -300,20 +323,34 @@ This section summarizes all loads applied to the bridge and the load combination
 \end{longtable}
 
 \vspace{1em}
-\begin{longtable}{|L{5.5cm}|p{10.0cm}|}
-\caption{\textbf{Live Loads (LL)}}
+\begin{longtable}{|L{6.5cm}|C{5.5cm}|C{2.6cm}|}
+""" + theme.longtable_header(
+        ["Parameter", "Value", "Unit"],
+        caption="Vehicle Live Loads (LL) --- per IRC 6",
+        label="tab:vehicle-ll") + r"""
+\textnormal{Vehicle Classes Considered} & """ + _tex(vehicles_str) + r""" & --- \\[6pt]
 \hline
-\textbf{parameter} & \textbf{value} \\
+\textnormal{Impact / Dynamic Allowance Factor (Cl. 208)} & """ + _tex(impact_factor_str) + r""" & (factor) \\[6pt]
 \hline
-\textnormal{Vehicles Considered} & """ + _tex(vehicles_str) + r""" \\[6pt]
+\textnormal{Longitudinal Braking Force (Cl. 211.2)} & """ + _tex(braking_val_str) + r""" & """ + _tex(braking_unit) + r""" \\[6pt]
 \hline
-\textnormal{Impact Factor (IRC 6)} & """ + _tex(impact_factor_str) + r""" \\[6pt]
-\hline
-\textnormal{Braking Load (IRC 6)} & """ + _tex(braking_force_str) + r""" \\[6pt]
-\hline
-\textnormal{Footpath Live Load (if applicable)} & """ + (_render_value(input_dict, KEY_LL_FOOTPATH_PRESSURE_VALUE, ' kN/m\\textsuperscript{2}')) + r""" \\[6pt]
+\textnormal{Centrifugal Force (Cl. 212)} & N/A & kN \\[6pt]
 \hline
 \end{longtable}
+\noindent\textit{Note: Vehicle classes reflect the selection in the Loading tab of Additional Inputs.""" + braking_note_tex + r""" Centrifugal force applies only to curved alignments (Cl.~212) and is not applicable to a straight bridge.}
+
+\vspace{1em}
+\begin{longtable}{|L{6.5cm}|C{5.5cm}|C{2.6cm}|}
+""" + theme.longtable_header(
+        ["Parameter", "Value", "Unit"],
+        caption="Footway / Footpath Live Load (LL) --- per IRC 6",
+        label="tab:footway-ll") + r"""
+\textnormal{Footpath Pressure Basis} & """ + _tex(fp_basis) + r""" & --- \\[6pt]
+\hline
+\textnormal{Footpath Live Load Intensity (Cl. 206)} & """ + _tex(fp_val_str) + r""" & """ + fp_unit + r""" \\[6pt]
+\hline
+\end{longtable}
+\noindent\textit{Note: The footway live load is tabulated separately from vehicle live loads as it acts on the footpath/kerb region only and is combined with vehicle loads per the IRC~6 load-combination rules (see Load Combinations below).}
 
 \vspace{1em}
 \begin{longtable}{|L{5.5cm}|p{10.0cm}|}
@@ -383,10 +420,10 @@ This section summarizes all loads applied to the bridge and the load combination
 
 \vspace{1em}
 \begin{longtable}{|C{4.0cm}|p{11.5cm}|}
-\caption{\textbf{Load Combinations}}
-\hline
-\textbf{Combination ID} & \textbf{Load Cases} \\[6pt]
-\hline
+""" + theme.longtable_header(
+        ["Combination ID", "Load Cases"],
+        caption="Load Combinations",
+        label="tab:load-combos") + r"""
 """ + lc_rows_str + r"""
 \end{longtable}
 
