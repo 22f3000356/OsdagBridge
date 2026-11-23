@@ -195,11 +195,8 @@ def preamble(project_name, job_number, report_date, report_version='Rev 0'):
 \numberwithin{figure}{chapter}
 """ + theme.table_layout_latex() + r"""
 
-% Prevent tables from overflowing past the page bottom (scope item 2):
-% if too few baseline-skips remain, break to the next page first.
+% Table page-break guards and colour palette
 """ + theme.pagebreak_guard_latex() + r"""
-
-% Colour palette — single source of truth (theme.py)
 """ + theme.color_definitions_latex() + r"""
 
 \fancypagestyle{main}{
@@ -897,12 +894,7 @@ def generate_report(payload, request):
             bridge = ReportDataBridge(payload.output_dict, payload.inputs, payload)
             span_m = float(payload.inputs.get(KEY_SPAN, 0) or 0)
 
-            # ── Programmatic charts (scope items 4 & 5) ──────────────────────
-            # Rendered to PNG bytes, written into tmp_images, and registered in
-            # fig_paths so the chapter generators embed them exactly like the
-            # existing CAD/grillage figures. Each returns None on failure, so a
-            # chart that cannot be built simply does not appear — it never
-            # breaks report compilation.
+            # Generate utilization ratio and material quantity charts
             try:
                 _chart_bytes = {
                     'ur_summary':        charts.utilization_ratio_chart(
