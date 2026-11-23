@@ -152,9 +152,6 @@ def longtable_header(columns, caption=None, label=None,
     parts.append(r"\endhead")
     # Footer shown at every page break (except the very last)
     parts.append(r"\hline")
-    parts.append(
-        r"\multicolumn{%d}{r}{\footnotesize\itshape Continued on next page}\\" % ncols
-    )
     parts.append(r"\endfoot")
     # Final footer (last page) — just the closing rule
     parts.append(r"\hline")
